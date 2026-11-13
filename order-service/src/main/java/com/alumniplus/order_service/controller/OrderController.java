@@ -8,7 +8,7 @@ public class OrderController {
 
     // TODO: write the endpoints here
 
-  @PostMapping("/")
+  @GetMapping("/")
   public String root() {
     return "working";
   }
