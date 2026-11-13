@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/orders")
 public class OrderController {
 
-    // TODO: write the endpoints here
+    // TODO: Write the endpoints here
 
   @GetMapping("/")
   public String root() {
