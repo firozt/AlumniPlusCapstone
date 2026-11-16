@@ -7,4 +7,5 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - ./order-service/.env
+      - path: ./order-service/.env
+        required: false
