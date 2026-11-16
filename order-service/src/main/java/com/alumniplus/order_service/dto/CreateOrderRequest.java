@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 public record CreateOrderRequest(
 
         @NotNull(message = "instrumentId is required")
-        Long instrumentId,
+        String instrumentId,
 
         @NotNull(message = "side must be BUY or SELL")
         Side side,

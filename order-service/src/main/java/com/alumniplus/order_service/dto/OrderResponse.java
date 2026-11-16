@@ -8,28 +8,26 @@ import java.time.Instant;
 
 public record OrderResponse(
     Long orderId,
-    String ownerUsername,
-    Long instrumentId,
-    String symbol,
-    String instrumentName,
+    String owner,
+    String instrumentId,
     Side side,
     Long quantity,
     BigDecimal limitPrice,
     OrderStatus status,
     Instant createdAt,
-    Instant updatedAt) {
+    Instant updatedAt,
+    Long version) {
   public static OrderResponse from(OrderEntity o) {
     return new OrderResponse(
         o.getId(),
-        o.getOwnerUsername(),
+        o.getOwner(),
         o.getInstrument().getId(),
-        o.getInstrument().getSymbol(),
-        o.getInstrument().getName(),
         o.getSide(),
         o.getQuantity(),
         o.getLimitPrice(),
         o.getStatus(),
         o.getCreatedAt(),
-        o.getUpdatedAt());
+        o.getUpdatedAt(),
+        o.getVersion());
   }
 }
