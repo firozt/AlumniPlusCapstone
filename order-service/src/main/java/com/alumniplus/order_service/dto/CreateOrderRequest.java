@@ -4,13 +4,14 @@ import com.alumniplus.order_service.model.Side;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 
 public record CreateOrderRequest(
 
-        @NotNull(message = "instrumentId is required")
+        @NotBlank(message = "instrumentId is required")
         String instrumentId,
 
         @NotNull(message = "side must be BUY or SELL")

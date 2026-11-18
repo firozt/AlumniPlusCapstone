@@ -16,6 +16,8 @@ import com.alumniplus.order_service.dto.CreateOrderRequest;
 import com.alumniplus.order_service.dto.OrderResponse;
 import com.alumniplus.order_service.model.Side;
 import com.alumniplus.order_service.service.OrderService;
+import com.alumniplus.order_service.service.OrderSubmissionService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -23,10 +25,13 @@ public class OrderController {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final OrderService orderService;
+    private final OrderSubmissionService orderSubmissionService;
 
-    public OrderController(KafkaTemplate<String, String> kafkaTemplate, OrderService orderService) {
+    public OrderController(KafkaTemplate<String, String> kafkaTemplate, OrderService orderService,
+            OrderSubmissionService orderSubmissionService) {
         this.kafkaTemplate = kafkaTemplate;
         this.orderService = orderService;
+        this.orderSubmissionService = orderSubmissionService;
     }
 
     // TODO: Write the endpoints here
@@ -39,23 +44,34 @@ public class OrderController {
 
 
   @PreAuthorize("hasRole('TRADERS')")
-  @GetMapping("/orders")
+  @GetMapping("/view")
   public List<OrderResponse> getUserOrders(@AuthenticationPrincipal Jwt jwt) {
       String username = jwt.getClaimAsString("preferred_username");
       if (username == null || username.isBlank()) {
           throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token is missing preferred_username");
       }
-      // return orderService.getOrdersForOwner(username);
-      System.out.println("[LOGS] Get Orders for studnet14");
-      return orderService.getOrdersForOwner("studnet14");
+      return orderService.getOrdersForOwner(username);
+      // System.out.println("[LOGS] Get Orders for studnet14");
+      // return orderService.getOrdersForOwner("studnet14");
   }
 
 
   @PreAuthorize("hasRole('OPERATIONS')")
-  @GetMapping("/all-orders")
-  public Map<String, Object> getAllOrders() {
+  @GetMapping("/view-all")
+  public List<OrderResponse> getAllOrders() {
+      return orderService.getAllOrders();
+  }
 
-      return null;
+  @PreAuthorize("hasRole('TRADERS')")
+  @PostMapping("/submit")
+  @ResponseStatus(HttpStatus.CREATED)
+  public OrderResponse submitOrder(@Valid @RequestBody CreateOrderRequest request,
+          @AuthenticationPrincipal Jwt jwt) {
+      String username = jwt.getClaimAsString("preferred_username");
+      if (username == null || username.isBlank()) {
+          throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token is missing preferred_username");
+      }
+      return orderSubmissionService.submitOrder(request, username);
   }
 
 
