@@ -1,9 +1,15 @@
 package com.alumniplus.order_service.controller;
 
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.math.BigDecimal;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
 
 import com.alumniplus.order_service.dto.CreateOrderRequest;
@@ -31,6 +37,29 @@ public class OrderController {
     return "working";
   }
 
+
+  @PreAuthorize("hasRole('TRADERS')")
+  @GetMapping("/orders")
+  public List<OrderResponse> getUserOrders(@AuthenticationPrincipal Jwt jwt) {
+      String username = jwt.getClaimAsString("preferred_username");
+      if (username == null || username.isBlank()) {
+          throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token is missing preferred_username");
+      }
+      // return orderService.getOrdersForOwner(username);
+      System.out.println("[LOGS] Get Orders for studnet14");
+      return orderService.getOrdersForOwner("studnet14");
+  }
+
+
+  @PreAuthorize("hasRole('OPERATIONS')")
+  @GetMapping("/all-orders")
+  public Map<String, Object> getAllOrders() {
+
+      return null;
+  }
+
+
+  // TODO - should probably delete these at some point
   @PostMapping("/test-kafka")
   public CompletableFuture<Map<String, Object>> testKafka(
       @RequestParam(defaultValue = "Kafka test message") String message) {
