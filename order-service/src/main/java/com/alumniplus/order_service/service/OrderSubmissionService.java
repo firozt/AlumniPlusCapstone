@@ -19,23 +19,20 @@ public class OrderSubmissionService {
     private final ObjectMapper objectMapper;
     private final String topic;
 
-    public OrderSubmissionService(OrderService orderService,
-            KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper,
-            @Value("${app.kafka.orders-submitted-topic}") String topic) {
+    public OrderSubmissionService(OrderService orderService, KafkaTemplate<String, String> kafkaTemplate, ObjectMapper objectMapper, @Value("${app.kafka.orders-submitted-topic}") String topic) {
         this.orderService = orderService;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
         this.topic = topic;
     }
 
+    // creates order using order service then pushes to kafka
     public OrderResponse submitOrder(CreateOrderRequest request, String owner) {
-        // The separate service commits the order before Kafka consumers can receive it.
         OrderResponse order = orderService.createOrder(request, owner);
 
         try {
             String payload = objectMapper.writeValueAsString(order);
-            kafkaTemplate.send(topic, order.orderId().toString(), payload)
-                    .get(30, TimeUnit.SECONDS);
+            kafkaTemplate.send(topic, order.orderId().toString(), payload) .get(30, TimeUnit.SECONDS);
             return order;
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
