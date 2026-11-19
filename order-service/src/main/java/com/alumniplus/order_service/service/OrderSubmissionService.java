@@ -31,6 +31,7 @@ public class OrderSubmissionService {
     public OrderResponse submitOrder(CreateOrderRequest request, String owner) {
         // The separate service commits the order before Kafka consumers can receive it.
         OrderResponse order = orderService.createOrder(request, owner);
+
         try {
             String payload = objectMapper.writeValueAsString(order);
             kafkaTemplate.send(topic, order.orderId().toString(), payload)

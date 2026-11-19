@@ -28,8 +28,10 @@ public class OrderService {
     // takes order request and inserts it into the database
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request, String owner) {
+        // verify valid instrument
         Instrument instrument = isInstrumentExists(request.instrumentId());
 
+        // create order
         OrderEntity order = new OrderEntity();
         order.setOwner(owner);
         order.setInstrument(instrument);
@@ -38,6 +40,7 @@ public class OrderService {
         order.setLimitPrice(request.limitPrice());
         order.setStatus(OrderStatus.SUBMITTED);
         
+        // insert to DB
         return OrderResponse.from(orderRepository.save(order));
     }
 
