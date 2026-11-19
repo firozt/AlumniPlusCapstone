@@ -1,10 +1,6 @@
 package com.alumniplus.order_service.controller;
 
-import java.util.Map;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.math.BigDecimal;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -16,7 +12,6 @@ import com.alumniplus.order_service.dto.CreateOrderRequest;
 import com.alumniplus.order_service.dto.OrderResponse;
 import com.alumniplus.order_service.dto.OrderSummaryResponse;
 import org.springframework.security.core.Authentication;
-import com.alumniplus.order_service.model.Side;
 import com.alumniplus.order_service.service.OrderService;
 import com.alumniplus.order_service.service.OrderSubmissionService;
 import jakarta.validation.Valid;
@@ -25,13 +20,10 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/orders")
 public class OrderController {
 
-    private final KafkaTemplate<String, String> kafkaTemplate;
     private final OrderService orderService;
     private final OrderSubmissionService orderSubmissionService;
 
-    public OrderController(KafkaTemplate<String, String> kafkaTemplate, OrderService orderService,
-            OrderSubmissionService orderSubmissionService) {
-        this.kafkaTemplate = kafkaTemplate;
+    public OrderController(OrderService orderService,OrderSubmissionService orderSubmissionService) {
         this.orderService = orderService;
         this.orderSubmissionService = orderSubmissionService;
     }
@@ -64,7 +56,8 @@ public class OrderController {
             Authentication authentication) {
         // TODO: Use authorities to select overall totals for OPERATIONS.
         // TODO: For TRADER, restrict orders to the token's preferred_username.
-        // TODO: Use Java Streams to calculate order count and sum(quantity * limitPrice).
+        // TODO: Use Java Streams to calculate order count and sum(quantity *
+        // limitPrice).
         // TODO: Return both values in OrderSummaryResponse; no grouping is needed.
         throw new UnsupportedOperationException("Order summary is not implemented yet");
     }
@@ -95,25 +88,25 @@ public class OrderController {
     // // TODO - should probably delete these at some point
     // @PostMapping("/test-kafka")
     // public CompletableFuture<Map<String, Object>> testKafka(
-    //         @RequestParam(defaultValue = "Kafka test message") String message) {
-    //     return kafkaTemplate.send("orders-test", message)
-    //             .thenApply(result -> {
-    //                 var metadata = result.getRecordMetadata();
-    //                 return Map.<String, Object>of(
-    //                         "topic", metadata.topic(),
-    //                         "partition", metadata.partition(),
-    //                         "offset", metadata.offset(),
-    //                         "message", message);
-    //             });
+    // @RequestParam(defaultValue = "Kafka test message") String message) {
+    // return kafkaTemplate.send("orders-test", message)
+    // .thenApply(result -> {
+    // var metadata = result.getRecordMetadata();
+    // return Map.<String, Object>of(
+    // "topic", metadata.topic(),
+    // "partition", metadata.partition(),
+    // "offset", metadata.offset(),
+    // "message", message);
+    // });
     // }
     //
     // @PostMapping("/test-db")
     // public OrderResponse insertDB(@RequestParam String instrumentId) {
-    //     CreateOrderRequest request = new CreateOrderRequest(
-    //             instrumentId,
-    //             Side.BUY,
-    //             1L,
-    //             new BigDecimal("1.0000"));
-    //     return orderService.createOrder(request, "test-user");
+    // CreateOrderRequest request = new CreateOrderRequest(
+    // instrumentId,
+    // Side.BUY,
+    // 1L,
+    // new BigDecimal("1.0000"));
+    // return orderService.createOrder(request, "test-user");
     // }
 }
