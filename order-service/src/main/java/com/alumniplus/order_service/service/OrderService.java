@@ -25,13 +25,10 @@ public class OrderService {
         this.instrumentRepository = instrumentRepository;
     }
 
+    // takes order request and inserts it into the database
     @Transactional
     public OrderResponse createOrder(CreateOrderRequest request, String owner) {
-        Instrument instrument = instrumentRepository.findById(request.instrumentId())
-                .filter(Instrument::isActive)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Active instrument not found: " + request.instrumentId()));
-
+        Instrument instrument = isInstrumentExists(request.instrumentId());
 
         OrderEntity order = new OrderEntity();
         order.setOwner(owner);
@@ -43,6 +40,17 @@ public class OrderService {
         
         return OrderResponse.from(orderRepository.save(order));
     }
+
+    // verify the instrument they want to buy actually exists
+   @Transactional(readOnly = true) 
+   public Instrument isInstrumentExists(String id) {
+        Instrument instrument = instrumentRepository.findById(id)
+                .filter(Instrument::isActive)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Active instrument not found: " + id));
+
+        return instrument;
+   }
 
     @Transactional(readOnly = true)
     public OrderResponse getOrder(Long orderId) {

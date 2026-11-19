@@ -17,6 +17,7 @@ public record OrderResponse(
     Instant createdAt,
     Instant updatedAt,
     Long version) {
+
   public static OrderResponse from(OrderEntity o) {
     return new OrderResponse(
         o.getId(),
