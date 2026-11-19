@@ -43,7 +43,7 @@ public class OrderController {
   }
 
 
-  @PreAuthorize("hasRole('TRADERS')")
+  @PreAuthorize("hasRole('TRADER')")
   @GetMapping("/view")
   public List<OrderResponse> getUserOrders(@AuthenticationPrincipal Jwt jwt) {
       String username = jwt.getClaimAsString("preferred_username");
@@ -62,7 +62,7 @@ public class OrderController {
       return orderService.getAllOrders();
   }
 
-  @PreAuthorize("hasRole('TRADERS')")
+  @PreAuthorize("hasRole('TRADER')")
   @PostMapping("/submit")
   @ResponseStatus(HttpStatus.CREATED)
   public OrderResponse submitOrder(@Valid @RequestBody CreateOrderRequest request,
