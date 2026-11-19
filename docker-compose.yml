@@ -1,0 +1,11 @@
+services:
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    ports:
+      - "8080:8080"
+    env_file:
+      - path: ./order-service/.env
+        required: false
