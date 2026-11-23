@@ -36,19 +36,22 @@ pipeline {
 
         stage('Build Docker images') {
             steps {
-                sh 'docker compose build'
+                sh 'docker build -t order-service:latest ./order-service'
+                sh 'docker build -t activity-service:latest ./activity-service'
             }
         }
-        // TODO: add other .envs here
-        stage('Run containers') {
+
+        stage('Run Order Service') {
             steps {
                 withCredentials([
                     file(credentialsId: 'orders-env', variable: 'ORDERS_ENV')
                 ]) {
                     sh '''
-                        cp "$ORDERS_ENV" order-service/.env
-                        trap 'rm -f order-service/.env' EXIT
-                        docker compose up -d
+                        docker run -d --name order-service \\
+                            --restart unless-stopped \\
+                            --env-file "$ORDERS_ENV" \\
+                            -p 8080:8080 \\
+                            order-service:latest
                     '''
                 }
             }
