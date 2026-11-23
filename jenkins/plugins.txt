@@ -21,3 +21,8 @@
 #
 # Prefer clicking? Leave this file as it is and pick plugins in the wizard
 # or in Manage Jenkins -> Plugins instead.
+workflow-aggregator
+git
+docker-workflow
+junit
+pipeline-stage-view
