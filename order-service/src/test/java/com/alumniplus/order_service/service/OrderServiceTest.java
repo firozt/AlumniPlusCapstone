@@ -2,6 +2,7 @@ package com.alumniplus.order_service.service;
 
 import com.alumniplus.order_service.dto.CreateOrderRequest;
 import com.alumniplus.order_service.dto.OrderResponse;
+import com.alumniplus.order_service.dto.OrderSummaryResponse;
 import com.alumniplus.order_service.model.Instrument;
 import com.alumniplus.order_service.model.OrderEntity;
 import com.alumniplus.order_service.model.OrderStatus;
@@ -9,6 +10,10 @@ import com.alumniplus.order_service.model.Side;
 import com.alumniplus.order_service.repository.InstrumentRepository;
 import com.alumniplus.order_service.repository.OrderRepository;
 import org.junit.jupiter.api.Test;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.web.server.ResponseStatusException;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -22,28 +27,145 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
 
-    @Mock // Replaces the real database repository.
+    @Mock 
     private OrderRepository orderRepository;
 
     @Mock
     private InstrumentRepository instrumentRepository;
 
-    @InjectMocks // Creates the service with the mocked repositories.
+    @InjectMocks 
     private OrderService orderService;
 
     @Test
+    void createOrderRejectsMissingInstrument() {
+        when(instrumentRepository.findById("AAPL")).thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class,
+                () -> orderService.createOrder(sampleRequest(), "team-1-trader1"));
+
+        verify(instrumentRepository).findById("AAPL");
+        verifyNoInteractions(orderRepository);
+    }
+
+    @Test
+    void createOrderRejectsInactiveInstrument() {
+        Instrument instrument = new Instrument();
+        instrument.setId("AAPL");
+        instrument.setActive(false);
+        when(instrumentRepository.findById("AAPL")).thenReturn(Optional.of(instrument));
+
+        assertThrows(EntityNotFoundException.class,
+                () -> orderService.createOrder(sampleRequest(), "team-1-trader1"));
+
+        verifyNoInteractions(orderRepository);
+    }
+
+    @Test
+    void ownerCanCancelOrder() {
+        OrderEntity order = cancellationOrder(OrderStatus.SUBMITTED);
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+
+        OrderResponse response = orderService.cancelOrder(10L, "team-1-trader1");
+
+        assertAll(
+                () -> assertEquals(OrderStatus.CANCELLED, order.getStatus()),
+                () -> assertEquals(OrderStatus.CANCELLED, response.status()),
+                () -> assertEquals(10L, response.orderId()),
+                () -> assertEquals("team-1-trader1", response.owner()));
+        verify(orderRepository).flush();
+    }
+
+    @Test
+    void cancelOrderRejectsDifferentOwner() {
+        OrderEntity order = cancellationOrder(OrderStatus.SUBMITTED);
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> orderService.cancelOrder(10L, "team-1-trader2"));
+
+        assertEquals(HttpStatus.FORBIDDEN, exception.getStatusCode());
+        assertEquals(OrderStatus.SUBMITTED, order.getStatus());
+        verify(orderRepository).findById(10L);
+        verifyNoMoreInteractions(orderRepository);
+    }
+
+    @Test
+    void cancelOrderRejectsMissingOrder() {
+        when(orderRepository.findById(10L)).thenReturn(Optional.empty());
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> orderService.cancelOrder(10L, "team-1-trader1"));
+
+        assertEquals(HttpStatus.NOT_FOUND, exception.getStatusCode());
+        verify(orderRepository).findById(10L);
+        verifyNoMoreInteractions(orderRepository);
+    }
+
+    @Test
+    void cancellingAlreadyCancelledOrderLeavesItUnchanged() {
+        OrderEntity order = cancellationOrder(OrderStatus.CANCELLED);
+        OrderResponse original = OrderResponse.from(order);
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+
+        OrderResponse response = orderService.cancelOrder(10L, "team-1-trader1");
+
+        assertEquals(original, response);
+        assertEquals(original, OrderResponse.from(order));
+        verify(orderRepository).findById(10L);
+        verifyNoMoreInteractions(orderRepository);
+    }
+
+    @Test
+    void cancelOrderReturnsConflictForConcurrentUpdate() {
+        OrderEntity order = cancellationOrder(OrderStatus.SUBMITTED);
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+        var conflict = new ObjectOptimisticLockingFailureException(OrderEntity.class, 10L);
+        doThrow(conflict).when(orderRepository).flush();
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class,
+                () -> orderService.cancelOrder(10L, "team-1-trader1"));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertSame(conflict, exception.getCause());
+        verify(orderRepository).flush();
+        // Database rollback and real @Version conflicts require an integration test.
+    }
+
+    private CreateOrderRequest sampleRequest() {
+        return new CreateOrderRequest("AAPL", Side.BUY, 10L, new BigDecimal("185.50"));
+    }
+
+    private OrderEntity cancellationOrder(OrderStatus status) {
+        Instrument instrument = new Instrument();
+        instrument.setId("AAPL");
+        OrderEntity order = new OrderEntity();
+        order.setId(10L);
+        order.setOwner("team-1-trader1");
+        order.setInstrument(instrument);
+        order.setSide(Side.BUY);
+        order.setQuantity(10L);
+        order.setLimitPrice(new BigDecimal("185.50"));
+        order.setStatus(status);
+        order.setVersion(0L);
+        return order;
+    }
+
+    @Test
     void createOrderSavesSubmittedOrderForOwner() {
-        // Sets up data mocking database
+        // set up data mocking db
         Instrument instrument = new Instrument();
         instrument.setId("AAPL");
         instrument.setCurrency("GBP");
         instrument.setActive(true);
 
-        // when we query 'AAPL' return the instrument created above
+        // when we query AAPL return the instrument created above
         when(instrumentRepository.findById("AAPL")) .thenReturn(Optional.of(instrument));
         
        // when we save an order to the orders db, assign it id 42 and return it 

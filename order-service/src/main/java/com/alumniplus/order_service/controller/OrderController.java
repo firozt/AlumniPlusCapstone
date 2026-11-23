@@ -5,8 +5,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.*;
+
 
 import com.alumniplus.order_service.dto.CreateOrderRequest;
 import com.alumniplus.order_service.dto.OrderResponse;
@@ -54,12 +56,16 @@ public class OrderController {
     public OrderSummaryResponse getOrderSummary(
             @AuthenticationPrincipal Jwt jwt,
             Authentication authentication) {
-        // TODO: Use authorities to select overall totals for OPERATIONS.
-        // TODO: For TRADER, restrict orders to the token's preferred_username.
-        // TODO: Use Java Streams to calculate order count and sum(quantity *
-        // limitPrice).
-        // TODO: Return both values in OrderSummaryResponse; no grouping is needed.
-        throw new UnsupportedOperationException("Order summary is not implemented yet");
+        boolean isOperations = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_OPERATIONS"));
+        if (isOperations) {
+            return orderService.getOverallSummary();
+        }
+        String username = jwt.getClaimAsString("preferred_username");
+        if (username == null || username.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token is missing preferred_username");
+        }
+        return orderService.getSummaryForOwner(username);
     }
 
     @PreAuthorize("hasRole('TRADER')")
@@ -76,37 +82,12 @@ public class OrderController {
 
     @PreAuthorize("hasRole('TRADER')")
     @PostMapping("/cancel/{orderId}")
-    public OrderResponse cancelOrder(
+    public ResponseEntity<OrderResponse> cancelOrder(
             @PathVariable("orderId") Long orderId,
             @AuthenticationPrincipal Jwt jwt) {
-        // TODO: implement
-
         String username = jwt.getClaimAsString("preferred_username");
-        return null;
+
+        return ResponseEntity.ok(orderService.cancelOrder(orderId, username));
     }
 
-    // // TODO - should probably delete these at some point
-    // @PostMapping("/test-kafka")
-    // public CompletableFuture<Map<String, Object>> testKafka(
-    // @RequestParam(defaultValue = "Kafka test message") String message) {
-    // return kafkaTemplate.send("orders-test", message)
-    // .thenApply(result -> {
-    // var metadata = result.getRecordMetadata();
-    // return Map.<String, Object>of(
-    // "topic", metadata.topic(),
-    // "partition", metadata.partition(),
-    // "offset", metadata.offset(),
-    // "message", message);
-    // });
-    // }
-    //
-    // @PostMapping("/test-db")
-    // public OrderResponse insertDB(@RequestParam String instrumentId) {
-    // CreateOrderRequest request = new CreateOrderRequest(
-    // instrumentId,
-    // Side.BUY,
-    // 1L,
-    // new BigDecimal("1.0000"));
-    // return orderService.createOrder(request, "test-user");
-    // }
 }
