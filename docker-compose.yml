@@ -11,8 +11,9 @@ services:
       - path: ./order-service/.env
         required: false
 
-  activity-service:
-    image: activity-service:latest
-    build:
-      context: ./activity-service
-      dockerfile: Dockerfile
+        # TO ADD WHEN MERGED
+  # activity-service:
+  #   image: activity-service:latest
+  #   build:
+  #     context: ./activity-service
+  #     dockerfile: Dockerfile
