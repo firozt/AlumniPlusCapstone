@@ -47,6 +47,10 @@ pipeline {
                     file(credentialsId: 'orders-env', variable: 'ORDERS_ENV')
                 ]) {
                     sh '''
+                        existing=$(docker ps -aq --filter 'name=^/order-service$')
+                        if [ -n "$existing" ]; then
+                            docker rm -f "$existing"
+                        fi
                         docker run -d --name order-service \\
                             --restart unless-stopped \\
                             --env-file "$ORDERS_ENV" \\
