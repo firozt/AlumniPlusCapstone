@@ -37,7 +37,7 @@ pipeline {
         stage('Build Docker images') {
             steps {
                 sh 'docker build -t order-service:latest ./order-service'
-                sh 'docker build -t activity-service:latest ./activity-service'
+                // sh 'docker build -t activity-service:latest ./activity-service'
             }
         }
 
