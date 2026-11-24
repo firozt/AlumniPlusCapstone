@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 
 import java.util.List;
+import java.util.Optional;
 import java.math.BigDecimal;
 
 @Service
@@ -116,6 +117,19 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderSummaryResponse getSummaryForOwner(String owner) {
         return summarize(orderRepository.findByOwnerOrderByCreatedAtDesc(owner));
+    }
+
+    @Transactional
+    public Optional<OrderResponse> acceptIfSubmitted(Long orderId) {
+        Optional<OrderEntity> existing = orderRepository.findById(orderId);
+        if (existing.isEmpty() || existing.get().getStatus() != OrderStatus.SUBMITTED) {
+            return Optional.empty();
+        }
+        OrderEntity order = existing.get();
+        order.setStatus(OrderStatus.ACCEPTED);
+        // Flush checks @Version and updates timestamps before building the response.
+        orderRepository.flush();
+        return Optional.of(OrderResponse.from(order));
     }
 
     @Transactional(readOnly = true)
