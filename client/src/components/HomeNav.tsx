@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom'
 const HomeNav = () => {
   return (
     <div>
-      <div className="flex justify-between p-5 bg-gray-900 text-white border-b border-gray-800">
+      <div className="flex justify-between p-5 bg-page text-ink border-b border-white/10">
         {/* left side */}
         <div className="flex gap-5">
-          <div className="p-2">StockSim</div>
+          <Link to="/">
+            <div className="p-2 font-medium">StockSim</div>
+          </Link>
           {/* <div className="flex">
             <Link
               to="/Dashboard"
@@ -26,13 +28,13 @@ const HomeNav = () => {
         <div className="flex gap-5">
           <Link
             to="/Register"
-            className="rounded-[16px] bg-indigo-500 hover:bg-indigo-600 p-2 text-white transition-colors"
+            className="rounded-lg bg-accent text-page font-medium px-4 py-2 hover:bg-accent/90 transition-colors"
           >
             Get Started
           </Link>
           <Link
             to="/Login"
-            className="border border-gray-700 rounded p-2 hover:bg-gray-800"
+            className="rounded-lg border border-white/20 px-4 py-2 hover:border-accent hover:text-accent transition-colors"
           >
             Login
           </Link>

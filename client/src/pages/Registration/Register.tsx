@@ -1,4 +1,3 @@
-import React from 'react'
 import HomeNav from '../../components/HomeNav'
 import Footer from '../../components/Footer'
 // import MultiDevice from '../../assets/Multi_Device.png'
@@ -9,68 +8,65 @@ import { Link, useNavigate } from 'react-router-dom'
 
 const Register = () => {
   let [userName, setUserName] = useState('')
-  let [password, setPassword] = useState('')
-  let [showPassword, setShowPassword] = useState(false)
   let [error, setError] = useState('')
-  const navigate = useNavigate()
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setError('')
+  //   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  //     e.preventDefault()
+  //     setError('')
 
-    try {
-      // Username-only auth: password is collected but not sent. The backend
-      // assigns a default starting balance when none is provided.
-      const res = await axios.post('/api/users', { userName })
-      saveUser(res.data)
-      navigate('/Dashboard')
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 409) {
-        setError('That username is already taken.')
-      } else {
-        setError('Registration failed. Please try again.')
-      }
-      console.error(err)
-    }
-  }
+  //     try {
+  //       // Username-only auth: password is collected but not sent. The backend
+  //       // assigns a default starting balance when none is provided.
+  //       const res = await axios.post('/api/users', { userName })
+  //       saveUser(res.data)
+  //       navigate('/Dashboard')
+  //     } catch (err) {
+  //       if (axios.isAxiosError(err) && err.response?.status === 409) {
+  //         setError('That username is already taken.')
+  //       } else {
+  //         setError('Registration failed. Please try again.')
+  //       }
+  //       console.error(err)
+  //     }
+  //   }
 
   return (
-    <div className="flex flex-col min-h-svh bg-black">
+    <div className="flex flex-col min-h-svh bg-surface text-ink">
       <HomeNav />
-      <div className="bg-gray-950 flex-grow flex flex-col">
+      <div className="flex-grow flex flex-col">
         <div className="container mx-auto flex flex-grow">
           {/* image */}
-          <div className="flex-1 flex-col justify-center p-10 bg-gray-700 text-white flex-grow">
+          <div className="flex-1 flex-col justify-center p-10 bg-accent text-page flex-grow">
             <div className="text-[32px] mb-5 pt-5 mt-5">Sign up for free</div>
-            <ul className="list-disc pl-5 space-y-1 pt-3">
+            <ul className="list-disc pl-5 space-y-1 pt-3 text-page/80 marker:text-page">
               <li>
                 Practice trading stocks, cryptos and options with virtual money
               </li>
               <li>Gain confidence before risking your own money</li>
               <li>Learn how the market works in a safe space with no risk</li>
             </ul>
-            <div className="mt-10 pl-10">
+            {/* <div className="mt-10 pl-10">
               <img src={MultiDevice} className="h-auto w-100" alt="" />
-            </div>
+            </div> */}
           </div>
           {/* content */}
-          <div className="flex-1 bg-gray-950 p-10 text-white flex-grow">
+          <div className="flex-1 p-10 flex-grow bg-surface">
             <div className="text-[32px] mb-5 pt-5 mt-5">Register</div>
             <div className="text-[24px]">Create an Account</div>
             <div className="flex gap-1">
-              <div className="opacity-50">Already have an account?</div>
+              <div className="text-white/60">Already have an account?</div>
               <Link
                 to="/Login"
-                className="font-bold text-indigo-500 underline hover:text-indigo-700 hover:no-underline duration-250 mb-10"
+                className="font-bold text-accent underline hover:no-underline duration-250 mb-10"
               >
                 log in here
               </Link>
             </div>
-            <form className="flex flex-col" onSubmit={handleSubmit}>
+            <form className="flex flex-col">
               <label className="flex flex-col gap-2">
                 Username
                 <input
-                  className="rounded-lg p-3 bg-gray-700 mb-5"
+                  className="rounded-lg p-3 mb-5 bg-page border border-white/20 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-accent"
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
                   placeholder="Enter username"
@@ -117,7 +113,7 @@ const Register = () => {
               <label className="flex flex-col ">
                 <button
                   type="submit"
-                  className="text-white bg-indigo-500 rounded-lg p-3 mb-5 hover:bg-indigo-700 duration-250"
+                  className="bg-accent text-page font-medium rounded-lg p-3 mb-5 hover:bg-accent/90 duration-250"
                 >
                   Sign Up
                 </button>

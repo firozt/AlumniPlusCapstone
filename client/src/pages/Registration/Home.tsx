@@ -1,6 +1,4 @@
-import React from 'react'
 import { Link } from 'react-router-dom'
-import TradeOrder from '../Interface/TradeOrder'
 
 const Home = () => {
   return (
@@ -8,7 +6,20 @@ const Home = () => {
       <div>
         <div>Home</div>
         <div>test</div>
-        <Link to="/TradeOrder">TradeOrder</Link>
+        <div className="flex-col">
+          <div>
+            <Link to="/TradeOrder">TradeOrder</Link>
+          </div>
+          <div>
+            <Link to="/Login">Login</Link>
+          </div>
+          <div>
+            <Link to="/Register">Register</Link>
+          </div>
+          <div>
+            <Link to="/Activity">Activity</Link>
+          </div>
+        </div>
       </div>
     </div>
   )

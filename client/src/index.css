@@ -1,1 +1,10 @@
 @import 'tailwindcss';
+
+@theme {
+  --color-chrome: #0b0d1f; /* header + footer: darkest, frames the page */
+  --color-page: #171a31; /* back to the original: right panel, body */
+  --color-surface: #252945; /* left panel, inputs */
+  --color-accent: #e8bcc2;
+  --color-ink: #f4f4f6;
+  --color-teal: #7cc4c0;
+}
