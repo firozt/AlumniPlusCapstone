@@ -13,7 +13,7 @@ const DashboardNav = () => {
         {/* left side */}
         <div className="flex gap-5">
           <div className="p-2 font-medium">
-            <Link to="/">StockSim</Link>
+            <Link to="/">Tradr</Link>
           </div>
           <div className="flex">
             <NavLink to="/Activity" className={navLinkClass}>

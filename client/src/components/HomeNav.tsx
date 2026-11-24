@@ -7,7 +7,7 @@ const HomeNav = () => {
         {/* left side */}
         <div className="flex gap-5">
           <Link to="/">
-            <div className="p-2 font-medium">StockSim</div>
+            <div className="p-2 font-medium">Tradr</div>
           </Link>
           {/* <div className="flex">
             <Link

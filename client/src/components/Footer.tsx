@@ -14,7 +14,7 @@ const Footer = () => {
         <span className="text-sm text-white/50">
           © 2026{' '}
           <a href="#" className="hover:text-accent hover:underline">
-            StockSim™
+            Tradr™
           </a>
           . All Rights Reserved.
         </span>

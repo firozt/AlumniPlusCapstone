@@ -1,55 +1,42 @@
 import HomeNav from '../../components/HomeNav'
 import Footer from '../../components/Footer'
-// import MultiDevice from '../../assets/Multi_Device.png'
 import { useState } from 'react'
-// import axios from 'axios'
-import { Link, useNavigate } from 'react-router-dom'
-// import { saveUser } from '../../lib/session'
+import { Link } from 'react-router-dom'
 
 const Register = () => {
-  let [userName, setUserName] = useState('')
-  let [error, setError] = useState('')
-
-  //   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-  //     e.preventDefault()
-  //     setError('')
-
-  //     try {
-  //       // Username-only auth: password is collected but not sent. The backend
-  //       // assigns a default starting balance when none is provided.
-  //       const res = await axios.post('/api/users', { userName })
-  //       saveUser(res.data)
-  //       navigate('/Dashboard')
-  //     } catch (err) {
-  //       if (axios.isAxiosError(err) && err.response?.status === 409) {
-  //         setError('That username is already taken.')
-  //       } else {
-  //         setError('Registration failed. Please try again.')
-  //       }
-  //       console.error(err)
-  //     }
-  //   }
+  const [userName, setUserName] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [error] = useState('')
 
   return (
     <div className="flex flex-col min-h-svh bg-surface text-ink">
       <HomeNav />
       <div className="flex-grow flex flex-col">
         <div className="container mx-auto flex flex-grow">
-          {/* image */}
+          {/* info panel */}
           <div className="flex-1 flex-col justify-center p-10 bg-accent text-page flex-grow">
             <div className="text-[32px] mb-5 pt-5 mt-5">Sign up for free</div>
             <ul className="list-disc pl-5 space-y-1 pt-3 text-page/80 marker:text-page">
               <li>
-                Practice trading stocks, cryptos and options with virtual money
+                Place simulated buy and sell limit orders on five sample
+                instruments
               </li>
-              <li>Gain confidence before risking your own money</li>
-              <li>Learn how the market works in a safe space with no risk</li>
+              <li>
+                Follow each order from Submitted to Accepted, or cancel it while
+                it's still open
+              </li>
+              <li>
+                Review a timestamped history of every submission, acceptance and
+                cancellation
+              </li>
+              <li>
+                No real money and no real trades: all prices and data are
+                simulated
+              </li>
             </ul>
-            {/* <div className="mt-10 pl-10">
-              <img src={MultiDevice} className="h-auto w-100" alt="" />
-            </div> */}
           </div>
-          {/* content */}
+          {/* form panel */}
           <div className="flex-1 p-10 flex-grow bg-surface">
             <div className="text-[32px] mb-5 pt-5 mt-5">Register</div>
             <div className="text-[24px]">Create an Account</div>
@@ -71,53 +58,42 @@ const Register = () => {
                   onChange={(e) => setUserName(e.target.value)}
                   placeholder="Enter username"
                   type="text"
+                  autoComplete="username"
                 />
               </label>
 
-              {/* <label
-                htmlFor="current-password"
-                className="block text-sm mb-2 dark:text-white"
-              >
+              <label className="flex flex-col gap-2">
                 Password
-              </label>
-              <input
-                id="current-password"
-                type={showPassword ? 'text' : 'password'}
-                className="rounded-lg p-3 bg-gray-700 mb-5"
-                placeholder="Enter password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              /> */}
-
-              {/* Checkbox */}
-              {/* <div className="flex mb-4">
                 <input
-                  id="show-password-checkbox"
+                  className="rounded-lg p-3 mb-3 bg-page border border-white/20 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-accent"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                />
+              </label>
+
+              <label className="flex items-center gap-3 mb-5 text-sm text-white/60 cursor-pointer select-none">
+                <input
                   type="checkbox"
                   checked={showPassword}
                   onChange={(e) => setShowPassword(e.target.checked)}
-                  className="mt-0.5 border-gray-200 rounded-sm text-blue-600 mb-3"
+                  className="size-4 accent-accent"
                 />
-                <label
-                  htmlFor="show-password-checkbox"
-                  className="text-sm text-gray-500 ms-3 dark:text-neutral-400"
-                >
-                  Show password
-                </label>
-              </div> */}
+                Show password
+              </label>
 
               {error && (
-                <div className="mb-4 text-red-400 text-sm">{error}</div>
+                <div className="mb-4 text-rose-300 text-sm">{error}</div>
               )}
 
-              <label className="flex flex-col ">
-                <button
-                  type="submit"
-                  className="bg-accent text-page font-medium rounded-lg p-3 mb-5 hover:bg-accent/90 duration-250"
-                >
-                  Sign Up
-                </button>
-              </label>
+              <button
+                type="submit"
+                className="bg-accent text-page font-medium rounded-lg p-3 mb-5 hover:bg-accent/90 duration-250"
+              >
+                Sign Up
+              </button>
             </form>
           </div>
         </div>
