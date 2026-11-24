@@ -127,7 +127,7 @@ public class OrderService {
         }
         OrderEntity order = existing.get();
         order.setStatus(OrderStatus.ACCEPTED);
-        // Flush checks @Version and updates timestamps before building the response.
+        // flush checks @Version and updates timestamps before building the response.
         orderRepository.flush();
         return Optional.of(OrderResponse.from(order));
     }

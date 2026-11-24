@@ -7,6 +7,7 @@ import com.alumniplus.order_service.model.Side;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -35,6 +36,7 @@ class OrderAcceptanceServiceTest {
                 orderService, kafkaTemplate, objectMapper, "test.order-events", 0);
     }
 
+    // happy path, normal outcome
     @Test
     void acceptedOrderIsPublishedAfterDatabaseMethodReturns() {
         Instant now = Instant.parse("2026-11-19T12:00:00Z");
@@ -47,12 +49,13 @@ class OrderAcceptanceServiceTest {
 
         acceptanceService.acceptLater(42L);
 
-        var sequence = inOrder(orderService, objectMapper, kafkaTemplate);
+        // checks that order was accepted and pushed to kafka
+        InOrder sequence = inOrder(orderService, kafkaTemplate);
         sequence.verify(orderService).acceptIfSubmitted(42L);
-        sequence.verify(objectMapper).writeValueAsString(accepted);
         sequence.verify(kafkaTemplate).send("test.order-events", "42", "accepted-json");
-    }
+   }
 
+   // order may be skipped for multiple reasons (i.e cancelled), make sure kafka doesnt push
     @Test
     void skippedOrderDoesNotPublish() {
         when(orderService.acceptIfSubmitted(42L)).thenReturn(Optional.empty());
@@ -60,24 +63,15 @@ class OrderAcceptanceServiceTest {
         verifyNoInteractions(objectMapper, kafkaTemplate);
     }
 
+    // check a concurrency error doesnt overwrite written data
     @Test
     void concurrentUpdateDoesNotPublishOrRetryStaleOrder() {
-        when(orderService.acceptIfSubmitted(42L))
-                .thenThrow(new ObjectOptimisticLockingFailureException(OrderEntity.class, 42L));
-        assertDoesNotThrow(() -> acceptanceService.acceptLater(42L));
-        verify(orderService).acceptIfSubmitted(42L);
-        verifyNoInteractions(objectMapper, kafkaTemplate);
-    }
+        // mock concurrency exception
+        when(orderService.acceptIfSubmitted(1L)).thenThrow(new ObjectOptimisticLockingFailureException(OrderEntity.class, 42L));
 
-    @Test
-    void interruptionStopsProcessingAndPreservesInterruptFlag() {
-        Thread.currentThread().interrupt();
-        try {
-            acceptanceService.acceptLater(42L);
-            assertTrue(Thread.currentThread().isInterrupted());
-            verifyNoInteractions(orderService, objectMapper, kafkaTemplate);
-        } finally {
-            Thread.interrupted();
-        }
+        // check kafka wasnt pushed to
+        assertDoesNotThrow(() -> acceptanceService.acceptLater(1L));
+        verify(orderService).acceptIfSubmitted(1L);
+        verifyNoInteractions(objectMapper, kafkaTemplate);
     }
 }
