@@ -41,6 +41,23 @@ pipeline {
             }
         }
 
+        stage('Push to ECR') {
+            steps {
+                sh '''
+                    IMAGE="$ECR_REPO:order-service-$BUILD_NUMBER"
+
+                    docker tag order-service:latest "$IMAGE"
+                    docker login --username AWS --password-stdin "$ECR_REGISTRY" < /ecr/token
+                    docker push "$IMAGE"
+                '''
+            }
+            post {
+                always {
+                    sh 'docker logout "$ECR_REGISTRY" > /dev/null 2>&1 || true'
+                }
+            }
+        }
+
         stage('Run Order Service') {
             steps {
                 withCredentials([
