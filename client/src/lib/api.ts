@@ -1,7 +1,7 @@
 // src/lib/api.ts
 // Use this instead of importing axios directly, so every request carries the token.
 import axios from 'axios'
-import { getToken } from '../auth/AuthContext'
+import { getToken } from '../auth/tokenStore'
 
 const api = axios.create()
 
@@ -12,14 +12,13 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// 401 = missing or expired token: clear the session and go to login.
-// 403 is NOT handled here: it means "logged in but not allowed", so the
-// calling page should show the error message instead of logging the user out.
+// 401 = missing, expired or invalid token: send the user back to sign in.
+// 403 is NOT handled here: it means "signed in but not allowed", so the
+// calling page should show the error message instead.
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (axios.isAxiosError(err) && err.response?.status === 401) {
-      sessionStorage.removeItem('auth')
       window.location.href = '/Login'
     }
     return Promise.reject(err)

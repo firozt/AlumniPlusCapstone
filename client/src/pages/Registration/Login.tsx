@@ -1,13 +1,14 @@
 import HomeNav from '../../components/HomeNav'
 import Footer from '../../components/Footer'
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '../../auth/AuthContext'
+import { AUTH_MODE } from '../../auth/oidcConfig'
 
 const Login = () => {
-  const [userName, setUserName] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [error] = useState('')
+  const { user, isLoading, error, signIn } = useAuth()
+
+  // Already signed in: skip the login page.
+  if (user) return <Navigate to="/TradeOrder" replace />
 
   return (
     <div className="flex flex-col min-h-svh bg-surface text-ink">
@@ -31,65 +32,54 @@ const Login = () => {
               </li>
             </ul>
           </div>
-          {/* form panel */}
+          {/* sign-in panel */}
           <div className="flex-1 bg-surface p-10 flex-grow">
             <div className="text-[32px] mb-5 pt-5 mt-5">Login</div>
             <div className="text-[24px]">Welcome Back</div>
-            <div className="flex gap-1">
-              <div className="text-white/60">Don't have an account?</div>
-              <Link
-                to="/Register"
-                className="font-bold text-accent underline hover:no-underline duration-250 mb-10"
-              >
-                sign up here
-              </Link>
-            </div>
-            <form className="flex flex-col">
-              <label className="flex flex-col gap-2">
-                Username
-                <input
-                  className="rounded-lg p-3 mb-5 bg-page border border-white/20 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-accent"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  placeholder="Enter username"
-                  type="text"
-                  autoComplete="username"
-                />
-              </label>
 
-              <label className="flex flex-col gap-2">
-                Password
-                <input
-                  className="rounded-lg p-3 mb-3 bg-page border border-white/20 placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-accent"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                />
-              </label>
+            {AUTH_MODE === 'oidc' ? (
+              <>
+                <div className="text-white/60 mb-10">
+                  You'll be taken to the secure sign-in page, then brought back
+                  here.
+                </div>
+                <button
+                  onClick={() => signIn()}
+                  disabled={isLoading}
+                  className="w-full bg-accent text-page font-medium rounded-lg p-3 mb-5 hover:bg-accent/90 duration-250 disabled:opacity-50"
+                >
+                  Sign In
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="text-white/60 mb-10">
+                  Mock mode: pick a test user. No provider is connected yet.
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => signIn('team-1-trader1')}
+                    className="w-full bg-accent text-page font-medium rounded-lg p-3 hover:bg-accent/90 duration-250"
+                  >
+                    Sign in as team-1-trader1 (Trader)
+                  </button>
+                  <button
+                    onClick={() => signIn('team-1-trader2')}
+                    className="w-full border border-white/20 rounded-lg p-3 hover:border-accent hover:text-accent duration-250"
+                  >
+                    Sign in as team-1-trader2 (Trader)
+                  </button>
+                  <button
+                    onClick={() => signIn('team-1-ops1')}
+                    className="w-full border border-white/20 rounded-lg p-3 hover:border-accent hover:text-accent duration-250"
+                  >
+                    Sign in as team-1-ops1 (Operations)
+                  </button>
+                </div>
+              </>
+            )}
 
-              <label className="flex items-center gap-3 mb-5 text-sm text-white/60 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showPassword}
-                  onChange={(e) => setShowPassword(e.target.checked)}
-                  className="size-4 accent-accent"
-                />
-                Show password
-              </label>
-
-              {error && (
-                <div className="mb-4 text-rose-300 text-sm">{error}</div>
-              )}
-
-              <button
-                type="submit"
-                className="bg-accent text-page font-medium rounded-lg p-3 mb-5 hover:bg-accent/90 duration-250"
-              >
-                Sign In
-              </button>
-            </form>
+            {error && <div className="mt-4 text-rose-300 text-sm">{error}</div>}
           </div>
         </div>
       </div>
