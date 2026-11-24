@@ -1,0 +1,28 @@
+# Plugins baked into YOUR Jenkins image when you run ~/start-jenkins.sh
+#
+# One plugin ID per line. Pin a version if you like:   git:5.7.0
+# Find a plugin's ID at https://plugins.jenkins.io - it's the last part of
+# the plugin page's URL (https://plugins.jenkins.io/<id>/).
+# Dependencies are installed automatically.
+#
+# EXERCISE
+#   Read ~/reference/springboot-eks-demo.Jenkinsfile and list every plugin it
+#   needs below. For each step it uses, ask: which plugin provides it?
+#     - the "pipeline { ... }" syntax and "sh" steps
+#     - checking the code out from Git
+#     - withCredentials(...)
+#     - the AmazonWebServicesCredentialsBinding credential type
+#   Bonus: a plugin that shows each stage as a column in the job page.
+#   ~/springboot-app/Jenkinsfile and ~/sample-app/Jenkinsfile need only some
+#   of these - check that both run once you're done.
+#
+# Then run ~/start-jenkins.sh again. In the setup wizard choose
+# "Select plugins to install" -> "None", because yours are already there.
+#
+# Prefer clicking? Leave this file as it is and pick plugins in the wizard
+# or in Manage Jenkins -> Plugins instead.
+workflow-aggregator
+git
+docker-workflow
+junit
+pipeline-stage-view
