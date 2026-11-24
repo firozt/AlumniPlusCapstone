@@ -1,13 +1,38 @@
-# TOKEN_TRADER="eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJ2S29TaXBiRWlJc3lKQkwyOEU4ODE0WThkOVVYU0ozWFVtX3V1MXh4VVdZIn0.eyJleHAiOjE3OTUxMDI1NDksImlhdCI6MTc5NTEwMTY0OSwianRpIjoiZDE0NTU0MTYtYmRhNi00MDc1LTlkNDQtYzMwMTA0NWI2ZDI0IiwiaXNzIjoiaHR0cHM6Ly9hdXRoLjMtMTExLTIwNS04Ny5zc2xpcC5pby9yZWFsbXMvY2Fwc3RvbmUiLCJzdWIiOiI4N2VmOWY0MS04OWM2LTRkZDctYmUwNy0wMGNhMTk4NjhkZGYiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJjYXBzdG9uZS1mcm9udGVuZCIsInNpZCI6IjY1YzAyNTBhLWMzOGYtNGM1Zi04NTQ1LTczODIyZDFjMmNhNSIsImFjciI6IjEiLCJhbGxvd2VkLW9yaWdpbnMiOlsiaHR0cDovL2xvY2FsaG9zdDozMDAwIiwiaHR0cDovL2xvY2FsaG9zdDo1MTczIiwiaHR0cHM6Ly90ZWFtLTEuMy0xMTEtMjA1LTg3LnNzbGlwLmlvIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJUUkFERVIiXX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJuYW1lIjoidGVhbS0xIHRyYWRlcjEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJ0ZWFtLTEtdHJhZGVyMSIsImdpdmVuX25hbWUiOiJ0ZWFtLTEiLCJmYW1pbHlfbmFtZSI6InRyYWRlcjEiLCJlbWFpbCI6InRlYW0tMS10cmFkZXIxQGNhcHN0b25lLmxhYiJ9.AQxGiy7RkpLtYtDXOkAM9qgTA-3WWgF6uTOzIOsdtGBrFKO9-My5Iepri9v1jnJhozBRwKKkDltHyB_XUREX2u2fpxLZix1zK-XkZNPObb8OxcKDff8lWJOx0QbBmAMBefWJKEX2cYLyWvzNXnffaBGsB_Gl27VZHbxj0H7N3J4ltlw9pY9zWketmvOXsv12zOOIJNx9bExUOhilenxfn7FR_hXq--KKcOIbdacwPSbAk5oUBqK8NIavBwlj4Si-O9OImr4PkyzOnIgFqYkmJUrXcSZa-sGBZMgwTqlQmnPJ-dYNir1PkGjtbofZZmihMUB-8OW5-jkRysD04rSwZQ"
+echo "obtaining token..."
 TOKEN_TRADER=$(curl -sS -X POST \
-  "https://auth.3-111-205-87.sslip.io/realms/capstone/protocol/openid-connect/token" \
-  -d "grant_type=password" \
-  -d "client_id=capstone-frontend" \
-  --data-urlencode "username=team-1-trader1" \
-  --data-urlencode "password=1ocK9eLopHJw" \
-  | jq -r '.access_token')
+          "https://auth.3-111-205-87.sslip.io/realms/capstone/protocol/openid-connect/token" \
+            -d "grant_type=password" \
+              -d "client_id=capstone-frontend" \
+                --data-urlencode "username=team-1-trader1" \
+                  --data-urlencode "password=1ocK9eLopHJw" \
+                    | jq -r '.access_token')
 
+# echo "obtained token!, token is"
+# echo $TOKEN_TRADER
 echo "testing trader token on view"
-curl -i http://localhost:8080/api/orders \
-  -H "Authorization: Bearer $TOKEN_TRADER"
+
+curl -sS http://localhost:8080/api/orders/view \
+          -H "Authorization: Bearer $TOKEN_TRADER" \
+            -H "Accept: application/json" | jq
+
+
+echo "testing trader token on view all (expected 401)"
+
+curl -i http://localhost:8080/api/orders/view-all \
+          -H "Authorization: Bearer $TOKEN_TRADER"
+
+
+
+echo "testing trader token submiting trade (valid)"
+
+curl -i -X POST http://localhost:8080/api/orders/submit \
+          -H "Authorization: Bearer $TOKEN_TRADER" \
+            -H "Content-Type: application/json" \
+              -d '{
+    "instrumentId": "AAPL",
+        "side": "BUY",
+            "quantity": 10,
+                "limitPrice": 185.50
+                  }'
+
 
