@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
@@ -42,6 +43,55 @@ class OrderServiceTest {
 
     @InjectMocks 
     private OrderService orderService;
+
+    @Test
+    void submittedOrderIsAccepted() {
+        OrderEntity order = cancellationOrder(OrderStatus.SUBMITTED);
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+
+        OrderResponse response = orderService.acceptIfSubmitted(10L).orElseThrow();
+
+        assertEquals(OrderStatus.ACCEPTED, order.getStatus());
+        assertEquals(OrderStatus.ACCEPTED, response.status());
+        verify(orderRepository).flush();
+    }
+
+    @Test
+    void cancelledOrderIsNotAccepted() {
+        OrderEntity order = cancellationOrder(OrderStatus.CANCELLED);
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+
+        assertTrue(orderService.acceptIfSubmitted(10L).isEmpty());
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+        verify(orderRepository, never()).flush();
+    }
+
+    @Test
+    void alreadyAcceptedOrderIsNotChangedAgain() {
+        OrderEntity order = cancellationOrder(OrderStatus.ACCEPTED);
+        when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+
+        assertTrue(orderService.acceptIfSubmitted(10L).isEmpty());
+        verify(orderRepository, never()).flush();
+    }
+
+    @Test
+    void missingOrderIsSkippedByAcceptance() {
+        when(orderRepository.findById(10L)).thenReturn(Optional.empty());
+        assertTrue(orderService.acceptIfSubmitted(10L).isEmpty());
+        verify(orderRepository, never()).flush();
+    }
+
+    @Test
+    void acceptancePropagatesConcurrentUpdateForRollback() {
+        when(orderRepository.findById(10L))
+                .thenReturn(Optional.of(cancellationOrder(OrderStatus.SUBMITTED)));
+        var conflict = new ObjectOptimisticLockingFailureException(OrderEntity.class, 10L);
+        doThrow(conflict).when(orderRepository).flush();
+
+        assertSame(conflict, assertThrows(ObjectOptimisticLockingFailureException.class,
+                () -> orderService.acceptIfSubmitted(10L)));
+    }
 
     @Test
     void createOrderRejectsMissingInstrument() {
