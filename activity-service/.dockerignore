@@ -1,0 +1,22 @@
+
+# Credentials and environment variables
+.env
+.env.*
+
+# Local build output
+target/
+
+# Git files
+.git
+.gitignore
+
+# IDE configuration
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+
+# Documentation
+HELP.md
