@@ -98,7 +98,8 @@ public class OrderService {
 
         // check if its already cancelled
         if (order.getStatus() == OrderStatus.CANCELLED) {
-            return OrderResponse.from(order);
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Order " + orderId + " is already cancelled");
         }
 
         // set to cancelled

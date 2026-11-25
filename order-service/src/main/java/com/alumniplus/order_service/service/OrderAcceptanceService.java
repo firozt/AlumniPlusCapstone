@@ -7,6 +7,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import com.alumniplus.order_service.dto.OrderEvent;
+
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.concurrent.TimeUnit;
@@ -47,7 +50,7 @@ public class OrderAcceptanceService {
             }
 
             // send this update to kafka
-            String payload = objectMapper.writeValueAsString(accepted.get());
+            String payload = objectMapper.writeValueAsString(OrderEvent.of(accepted.get(), "SIMULATOR"));
             kafkaTemplate.send(topic, orderId.toString(), payload).get(30, TimeUnit.SECONDS);
 
         } catch (InterruptedException exception) {

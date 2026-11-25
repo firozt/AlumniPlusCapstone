@@ -1,6 +1,7 @@
 package com.alumniplus.order_service.service;
 
 import com.alumniplus.order_service.dto.CreateOrderRequest;
+import com.alumniplus.order_service.dto.OrderEvent;
 import com.alumniplus.order_service.dto.OrderResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -39,7 +40,7 @@ public class OrderSubmissionService {
         OrderResponse order = orderService.createOrder(request, owner);
 
         try {
-            String payload = objectMapper.writeValueAsString(order);
+            String payload = objectMapper.writeValueAsString(OrderEvent.of(order, owner));
             kafkaTemplate.send(topic, order.orderId().toString(), payload) .get(30, TimeUnit.SECONDS);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
@@ -54,6 +55,20 @@ public class OrderSubmissionService {
         }
         return order;
     }
+
+    public OrderResponse cancelOrder(Long orderId, String owner) {
+    OrderResponse order = orderService.cancelOrder(orderId, owner);
+    try {
+        String payload = objectMapper.writeValueAsString(OrderEvent.of(order, owner));
+        kafkaTemplate.send(topic, orderId.toString(), payload).get(30, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw publishFailure(order, e);
+    } catch (Exception e) {
+        throw publishFailure(order, e);
+    }
+    return order;
+}
 
     private ResponseStatusException publishFailure(OrderResponse order, Exception cause) {
         return new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,

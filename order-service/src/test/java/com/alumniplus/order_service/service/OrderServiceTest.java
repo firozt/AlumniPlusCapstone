@@ -159,15 +159,15 @@ class OrderServiceTest {
     }
 
     @Test
-    void cancellingAlreadyCancelledOrderLeavesItUnchanged() {
+    void cancellingAlreadyCancelledOrderReturnsConflict() {
         OrderEntity order = cancellationOrder(OrderStatus.CANCELLED);
-        OrderResponse original = OrderResponse.from(order);
         when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
 
-        OrderResponse response = orderService.cancelOrder(10L, "team-1-trader1");
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> orderService.cancelOrder(10L, "team-1-trader1"));
 
-        assertEquals(original, response);
-        assertEquals(original, OrderResponse.from(order));
+        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
         verify(orderRepository).findById(10L);
         verifyNoMoreInteractions(orderRepository);
     }

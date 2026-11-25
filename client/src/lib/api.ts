@@ -19,7 +19,12 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (axios.isAxiosError(err) && err.response?.status === 401) {
-      window.location.href = '/Login'
+      // The token was rejected, so the saved login is no good. Clear it,
+      // or the Login page sees a "logged-in" user and bounces straight back here.
+      sessionStorage.clear()
+      if (window.location.pathname !== '/Login') {
+        window.location.href = '/Login'
+      }
     }
     return Promise.reject(err)
   },
