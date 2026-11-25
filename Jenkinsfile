@@ -63,6 +63,7 @@ pipeline {
                 script {
                     if (!params.ACTIVITY_ONLY) {
                         sh 'docker build -t order-service:latest ./order-service'
+                        sh 'docker build -t react-frontend:latest ./client'
                     }
                 }
 
@@ -83,6 +84,11 @@ pipeline {
 
                             docker tag order-service:latest "$ORDER_IMAGE"
                             docker push "$ORDER_IMAGE"
+
+                            FRONTEND_IMAGE="$ECR_REPO:react-frontend-$BUILD_NUMBER"
+
+                            docker tag react-frontend:latest "$FRONTEND_IMAGE"
+                            docker push "$FRONTEND_IMAGE"
                         '''
                     }
                 }
