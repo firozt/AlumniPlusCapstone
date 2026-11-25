@@ -11,14 +11,14 @@ services:
       - path: ./order-service/.env
         required: true
 
-  # activity-service:
-  #   image: activity-service:latest
-  #   build:
-  #     context: ./activity-service
-  #     dockerfile: Dockerfile
-  #   env_file:
-  #     - path: ./activity-service/.env
-  #       required: true
+  activity-service:
+    image: activity-service:latest
+    build:
+      context: ./activity-service
+      dockerfile: Dockerfile
+    env_file:
+      - path: ./activity-service/.env
+        required: true
 
   react-frontend:
     image: react-frontend:latest
