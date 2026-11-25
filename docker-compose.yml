@@ -9,11 +9,22 @@ services:
       - "8080:8080"
     env_file:
       - path: ./order-service/.env
-        required: false
+        required: true
 
-        # TO ADD WHEN MERGED
   # activity-service:
   #   image: activity-service:latest
   #   build:
   #     context: ./activity-service
   #     dockerfile: Dockerfile
+  #   env_file:
+  #     - path: ./activity-service/.env
+  #       required: true
+
+  react-frontend:
+    image: react-frontend:latest
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    ports:
+      - "5173:8080"
+
