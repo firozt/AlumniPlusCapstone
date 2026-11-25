@@ -121,3 +121,4 @@ class OrderEventPublisherTest {
                 new BigDecimal("185.50"), status, now, now, 1L);
     }
 }
+
