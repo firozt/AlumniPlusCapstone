@@ -37,24 +37,52 @@ pipeline {
         stage('Build Docker images') {
             steps {
                 sh 'docker build -t order-service:latest ./order-service'
-                // sh 'docker build -t activity-service:latest ./activity-service'
+                 sh 'docker build -t activity-service:latest ./activity-service'
             }
         }
 
-        stage('Push to ECR') {
+       stage('Push to ECR') {
             steps {
                 sh '''
-                    IMAGE="$ECR_REPO:order-service-$BUILD_NUMBER"
+                    ORDER_IMAGE="$ECR_REPO:order-service-$BUILD_NUMBER"
+                    ACTIVITY_IMAGE="$ECR_REPO:activity-service-$BUILD_NUMBER"
 
-                    docker tag order-service:latest "$IMAGE"
+                    docker tag order-service:latest "$ORDER_IMAGE"
+                    docker tag activity-service:latest "$ACTIVITY_IMAGE"
+
                     docker login --username AWS --password-stdin "$ECR_REGISTRY" < /ecr/token
-                    docker push "$IMAGE"
+
+                    docker push "$ORDER_IMAGE"
+                    docker push "$ACTIVITY_IMAGE"
                 '''
             }
             post {
                 always {
                     sh 'docker logout "$ECR_REGISTRY" > /dev/null 2>&1 || true'
                 }
+            }
+        }
+
+        stage('Deploy Activity Service') {
+            steps {
+                sh '''
+                    IMAGE="$ECR_REPO:activity-service-$BUILD_NUMBER"
+
+                    sed "s|IMAGE_PLACEHOLDER|$IMAGE|g" \
+                        k8s/activity-deployment.yaml \
+                        > activity-deployment-rendered.yaml
+
+                    kubectl apply --dry-run=server \
+                        -f activity-deployment-rendered.yaml \
+                        -f k8s/activity-service.yaml
+
+                    kubectl apply \
+                        -f activity-deployment-rendered.yaml \
+                        -f k8s/activity-service.yaml
+
+                    kubectl rollout status deployment/activity-service \
+                        -n team-1 --timeout=360s
+                '''
             }
         }
 
