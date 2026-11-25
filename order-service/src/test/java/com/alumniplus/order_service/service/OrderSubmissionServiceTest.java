@@ -40,6 +40,9 @@ class OrderSubmissionServiceTest {
     private ObjectMapper objectMapper;
 
     @Mock
+    private OrderAcceptanceService acceptanceService;
+
+    @Mock
     private CompletableFuture<SendResult<String, String>> sendFuture;
 
     @Mock
@@ -52,7 +55,7 @@ class OrderSubmissionServiceTest {
     // called on before each test, sets up data to be used
     @BeforeEach
     void setUp() {
-        submissionService = new OrderSubmissionService(orderService, kafkaTemplate, objectMapper, TOPIC);
+        submissionService = new OrderSubmissionService(orderService, kafkaTemplate, objectMapper, TOPIC, acceptanceService);
         request = new CreateOrderRequest("AAPL", Side.BUY, 10L, new BigDecimal("185.50"));
         Instant now = Instant.parse("2026-11-19T12:00:00Z");
         savedOrder = new OrderResponse(42L, OWNER, "AAPL", Side.BUY, 10L,
@@ -70,10 +73,11 @@ class OrderSubmissionServiceTest {
         OrderResponse response = submissionService.submitOrder(request, OWNER);
 
         assertSame(savedOrder, response);
-        var sequence = inOrder(orderService, objectMapper, kafkaTemplate);
+        var sequence = inOrder(orderService, objectMapper, kafkaTemplate, acceptanceService);
         sequence.verify(orderService).createOrder(request, OWNER);
         sequence.verify(objectMapper).writeValueAsString(savedOrder);
         sequence.verify(kafkaTemplate).send(TOPIC, "42", PAYLOAD);
+        sequence.verify(acceptanceService).acceptLater(42L);
         verifyNoMoreInteractions(orderService, objectMapper, kafkaTemplate);
     }
 
@@ -88,7 +92,7 @@ class OrderSubmissionServiceTest {
 
         assertSame(failure, thrown);
         verify(orderService).createOrder(request, OWNER);
-        verifyNoInteractions(objectMapper, kafkaTemplate);
+        verifyNoInteractions(objectMapper, kafkaTemplate, acceptanceService);
     }
 
     @Test
@@ -103,6 +107,7 @@ class OrderSubmissionServiceTest {
 
         assertInstanceOf(ExecutionException.class, thrown.getCause());
         assertSame(failure, thrown.getCause().getCause());
+        verifyNoInteractions(acceptanceService);
     }
 
     private ResponseStatusException assertPublishFailure() {
