@@ -1,101 +1,126 @@
-import DashboardNav from '../../components/DashboardNav'
-import Footer from '../../components/Footer'
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
-// Static visual shell only: no state, no API calls.
-// Placeholder events so the table has something to render; replace with real data later.
-const placeholderEvents = [
-  {
-    eventId: 'a1',
-    orderId: 1000,
-    eventType: 'SUBMITTED',
-    eventTime: '2026-11-22 09:30:00',
-    actor: 'trader1',
-  },
-  {
-    eventId: 'a2',
-    orderId: 1000,
-    eventType: 'ACCEPTED',
-    eventTime: '2026-11-22 09:30:10',
-    actor: 'SIMULATOR',
-  },
-  {
-    eventId: 'a3',
-    orderId: 1002,
-    eventType: 'SUBMITTED',
-    eventTime: '2026-11-22 09:31:05',
-    actor: 'trader1',
-  },
-  {
-    eventId: 'a4',
-    orderId: 1002,
-    eventType: 'CANCELLED',
-    eventTime: '2026-11-22 09:31:09',
-    actor: 'trader1',
-  },
-]
-
-// Same tinted badges as TradeOrder so statuses look identical across screens.
-const eventBadge: Record<string, string> = {
-  SUBMITTED: 'bg-white/10 text-ink',
-  ACCEPTED: 'bg-emerald-400/10 text-emerald-300',
-  CANCELLED: 'bg-rose-400/10 text-rose-300',
+type Activity = {
+  eventId: string
+  orderId: number
+  eventType: 'SUBMITTED' | 'ACCEPTED' | 'CANCELLED'
+  owner: string
+  occurredAt: string // UTC LocalDateTime from the backend, no zone marker
 }
 
-const Activity = () => {
+type Props = {
+  token: string // same Keycloak access token you send to /api/orders
+}
+
+const badgeClass: Record<Activity['eventType'], string> = {
+  SUBMITTED: 'badge badge-submitted',
+  ACCEPTED: 'badge badge-accepted',
+  CANCELLED: 'badge badge-cancelled',
+}
+
+function formatTime(occurredAt: string): string {
+  // Backend sends UTC without "Z"; add it so the browser converts to local time.
+  const d = new Date(occurredAt.endsWith('Z') ? occurredAt : occurredAt + 'Z')
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+}
+
+function actorFor(e: Activity): string {
+  // Only the simulator accepts orders; the owner submits and cancels.
+  return e.eventType === 'ACCEPTED' ? 'SIMULATOR' : e.owner
+}
+
+export default function ActivityPage({ token }: Props) {
+  const [searchParams] = useSearchParams()
+  const orderId = searchParams.get('orderId')
+
+  const [events, setEvents] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!orderId) {
+      setEvents([])
+      setError('No order selected.')
+      return
+    }
+
+    const controller = new AbortController()
+    setLoading(true)
+    setError(null)
+
+    fetch(`/api/activity/${encodeURIComponent(orderId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    })
+      .then(async (r) => {
+        if (r.status === 403)
+          throw new Error('You are not authorized to view this order.')
+        if (!r.ok)
+          throw new Error(`Failed to load activity (HTTP ${r.status}).`)
+        return (await r.json()) as Activity[]
+      })
+      .then((data) => setEvents(data))
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return
+        setEvents([])
+        setError(
+          err instanceof Error ? err.message : 'Failed to load activity.',
+        )
+      })
+      .finally(() => setLoading(false))
+
+    return () => controller.abort()
+  }, [orderId, token])
+
   return (
-    <div className="flex flex-col min-h-svh bg-page text-ink">
-      <DashboardNav />
-      <div className="container mx-auto flex flex-col flex-grow my-10">
-        <div className="flex-grow flex flex-col border border-white/10 rounded-[20px] bg-surface p-5">
-          <div className="text-[32px] pb-2 mb-2 border-b border-white/10">
-            Order Activity
-          </div>
+    <div className="activity-card">
+      <h1>Order Activity{orderId ? ` — #${orderId}` : ''}</h1>
 
-          {/* Loading state (swap in while fetching):
-          <div className="p-4 text-white/60">Loading…</div>
-          */}
+      {loading && <p>Loading…</p>}
+      {error && <p className="error">{error}</p>}
 
-          {/* Empty state (swap in when there are no events):
-          <div className="p-4 text-white/60">No activity yet.</div>
-          */}
-
-          <div>
-            <div className="grid grid-cols-4 gap-6 p-2 pl-6 text-sm text-white/60 border-b border-white/10">
-              <div>Time</div>
-              <div>Order ID</div>
-              <div>Event</div>
-              <div>Actor</div>
-            </div>
-            {placeholderEvents.map((e) => (
-              <div
-                key={e.eventId}
-                className="grid grid-cols-4 gap-6 p-2 pl-6 items-center rounded hover:bg-white/5"
-              >
-                <div className="tabular-nums text-white/80">{e.eventTime}</div>
-                <div className="tabular-nums">{e.orderId}</div>
-                <div>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${eventBadge[e.eventType]}`}
+      {!loading && !error && (
+        <table className="activity-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Order ID</th>
+              <th>Event</th>
+              <th>Actor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.length === 0 ? (
+              <tr>
+                <td colSpan={4}>No activity recorded for this order yet.</td>
+              </tr>
+            ) : (
+              events.map((e) => (
+                <tr key={e.eventId}>
+                  <td>{formatTime(e.occurredAt)}</td>
+                  <td>{e.orderId}</td>
+                  <td>
+                    <span className={badgeClass[e.eventType]}>
+                      {e.eventType}
+                    </span>
+                  </td>
+                  <td
+                    className={
+                      e.eventType === 'ACCEPTED' ? 'actor-system' : undefined
+                    }
                   >
-                    {e.eventType}
-                  </span>
-                </div>
-                {/* SIMULATOR is muted so automatic events read differently from user actions */}
-                <div
-                  className={
-                    e.actor === 'SIMULATOR' ? 'text-white/50 italic' : ''
-                  }
-                >
-                  {e.actor}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <Footer />
+                    {actorFor(e)}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      )}
     </div>
   )
 }
-
-export default Activity
