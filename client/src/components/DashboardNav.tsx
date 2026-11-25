@@ -18,14 +18,14 @@ const DashboardNav = () => {
           <div className="p-2 font-medium">
             <Link to="/TradeOrder">Tradr</Link>
           </div>
-          <div className="flex">
+          {/* <div className="flex">
             <NavLink to="/TradeOrder" className={navLinkClass}>
               Orders
             </NavLink>
             <NavLink to="/Activity" className={navLinkClass}>
               Activity
             </NavLink>
-          </div>
+          </div> */}
         </div>
         {/* right side */}
         <div className="flex gap-5 items-center">
