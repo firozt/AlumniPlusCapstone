@@ -1,8 +1,10 @@
-
 package com.alumniplus.activity_service.consumer;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Set;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,52 +20,89 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 public class OrderActivityConsumer {
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(OrderActivityConsumer.class);
+    private static final Logger log =
+        LoggerFactory.getLogger(OrderActivityConsumer.class);
 
-    private final OrderActivityService service;
+    private static final Set<String> VALID_STATUSES =
+        Set.of("SUBMITTED", "ACCEPTED", "CANCELLED");
+
     private final ObjectMapper objectMapper;
+    private final OrderActivityService activityService;
 
     public OrderActivityConsumer(
-            OrderActivityService service,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            OrderActivityService activityService) {
 
-        this.service = service;
         this.objectMapper = objectMapper;
+        this.activityService = activityService;
     }
 
     @KafkaListener(topics = "${app.kafka.order-topic}")
     public void consume(String message) {
 
-        OrderActivityEvent event = objectMapper.readValue(
-                message,
-                OrderActivityEvent.class
+        OrderActivityEvent event =
+            objectMapper.readValue(message, OrderActivityEvent.class);
+
+        validateEvent(event);
+
+        String eventId = generateEventId(
+            event.orderId(),
+            event.version()
         );
 
         LocalDateTime occurredAt = LocalDateTime.ofInstant(
-                event.eventTime(),
-                ZoneOffset.UTC
+            event.updatedAt(),
+            ZoneOffset.UTC
         );
 
         OrderActivity activity = new OrderActivity(
-                event.eventId(),
-                event.orderId(),
-                event.eventType(),
-                occurredAt,
-                event.actor()
+            eventId,
+            event.orderId(),
+            event.status(),
+            occurredAt,
+            event.owner()
         );
 
         activity.setReceivedAt(
-                LocalDateTime.now(ZoneOffset.UTC)
+            LocalDateTime.now(ZoneOffset.UTC)
         );
 
-        service.recordActivity(activity);
+        activityService.recordActivity(activity);
 
-        logger.info(
-                "Processed activity: eventId={}, orderId={}, type={}",
-                event.eventId(),
-                event.orderId(),
-                event.eventType()
+        log.info(
+            "Processed order activity: eventId={}, orderId={}, eventType={}",
+            eventId,
+            event.orderId(),
+            event.status()
         );
+    }
+
+    private String generateEventId(Long orderId, Long version) {
+
+        String identifier = orderId + ":" + version;
+
+        return UUID.nameUUIDFromBytes(
+            identifier.getBytes(StandardCharsets.UTF_8)
+        ).toString();
+    }
+
+    private void validateEvent(OrderActivityEvent event) {
+
+        if (event == null
+                || event.orderId() == null
+                || event.orderId() <= 0
+                || event.version() == null
+                || event.version() < 0
+                || event.owner() == null
+                || event.owner().isBlank()
+                || event.owner().length() > 100
+                || event.updatedAt() == null
+                || event.status() == null
+                || !VALID_STATUSES.contains(event.status())) {
+
+            throw new IllegalArgumentException(
+                "Invalid order activity event"
+            );
+        }
     }
 }

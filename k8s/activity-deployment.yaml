@@ -88,7 +88,7 @@ spec:
 
             # Temporarily disabled until payload compatibility
             - name: SPRING_KAFKA_LISTENER_AUTO_STARTUP
-              value: "false"
+              value: "true"
 
             # Keycloak authentication
             - name: OAUTH_ISSUER
