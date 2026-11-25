@@ -6,6 +6,8 @@ import Footer from '../../components/Footer'
 import { activityApi, type OrderActivity } from '../../api/activity'
 import { errorMessage } from '../../api/orders'
 
+const POLL_MS = 3000
+
 // Same tinted badges as TradeOrder so statuses look identical across screens.
 const eventBadge: Record<string, string> = {
   SUBMITTED: 'bg-white/10 text-ink',
@@ -27,14 +29,20 @@ const Activity = () => {
   useEffect(() => {
     if (!validOrderId) return
     const controller = new AbortController()
+    let timer: ReturnType<typeof setTimeout> | undefined
 
-    async function loadHistory() {
-      setLoading(true)
-      setError(null)
-      setEvents([])
+    async function loadHistory(initialLoad = false) {
+      if (initialLoad) {
+        setLoading(true)
+        setError(null)
+        setEvents([])
+      }
       try {
         const history = await activityApi.history(orderId, controller.signal)
-        if (!controller.signal.aborted) setEvents(history)
+        if (!controller.signal.aborted) {
+          setEvents(history)
+          setError(null)
+        }
       } catch (err) {
         if (controller.signal.aborted) return
         setError(
@@ -43,12 +51,19 @@ const Activity = () => {
             : errorMessage(err),
         )
       } finally {
-        if (!controller.signal.aborted) setLoading(false)
+        if (!controller.signal.aborted) {
+          setLoading(false)
+          // Wait for this request to finish before scheduling another one.
+          timer = setTimeout(() => void loadHistory(), POLL_MS)
+        }
       }
     }
 
-    void loadHistory()
-    return () => controller.abort()
+    void loadHistory(true)
+    return () => {
+      controller.abort()
+      clearTimeout(timer)
+    }
   }, [orderId, validOrderId])
 
   return (
@@ -86,7 +101,7 @@ const Activity = () => {
             <div className="p-4 text-white/60">No activity yet.</div>
           )}
 
-          {validOrderId && !loading && !error && events.length > 0 && (
+          {validOrderId && !loading && events.length > 0 && (
             <div>
               <div className="grid grid-cols-4 gap-6 p-2 pl-6 text-sm text-white/60 border-b border-white/10">
                 <div>Time</div>
