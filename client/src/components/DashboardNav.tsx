@@ -1,11 +1,5 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-
-// Active link gets the accent; inactive links are muted and brighten on hover.
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  isActive
-    ? 'p-2 rounded text-accent'
-    : 'p-2 rounded text-white/60 hover:text-ink duration-250'
 
 const DashboardNav = () => {
   const { user, logout } = useAuth()

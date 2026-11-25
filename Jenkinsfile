@@ -149,17 +149,42 @@ pipeline {
                     file(credentialsId: 'orders-env', variable: 'ORDERS_ENV')
                 ]) {
                     sh '''
+                        docker network inspect capstone > /dev/null 2>&1 || docker network create capstone
+
                         existing=$(docker ps -aq --filter 'name=^/order-service$')
                         if [ -n "$existing" ]; then
                             docker rm -f "$existing"
                         fi
                         docker run -d --name order-service \\
                             --restart unless-stopped \\
+                            --network capstone \\
                             --env-file "$ORDERS_ENV" \\
                             -p 8080:8080 \\
                             order-service:latest
                     '''
                 }
+            }
+        }
+
+        stage('Run Frontend') {
+            when {
+                expression {
+                    !params.ACTIVITY_ONLY
+                }
+            }
+
+            steps {
+                sh '''
+                    existing=$(docker ps -aq --filter 'name=^/react-frontend$')
+                    if [ -n "$existing" ]; then
+                        docker rm -f "$existing"
+                    fi
+                    docker run -d --name react-frontend \\
+                        --restart unless-stopped \\
+                        --network capstone \\
+                        -p 5173:8080 \\
+                        react-frontend:latest
+                '''
             }
         }
     }
