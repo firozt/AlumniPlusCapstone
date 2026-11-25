@@ -84,7 +84,7 @@ public class OrderController {
             @AuthenticationPrincipal Jwt jwt) {
         String username = jwt.getClaimAsString("preferred_username");
 
-        return ResponseEntity.ok(orderService.cancelOrder(orderId, username));
+        return ResponseEntity.ok(orderSubmissionService.cancelOrder(orderId, username));
     }
 
 }
