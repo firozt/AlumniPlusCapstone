@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: activity-service
+  namespace: team-1
+  labels:
+    app: activity-service
+
+spec:
+  replicas: 1
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+
+  selector:
+    matchLabels:
+      app: activity-service
+
+  template:
+    metadata:
+      labels:
+        app: activity-service
+
+    spec:
+      terminationGracePeriodSeconds: 30
+
+      imagePullSecrets:
+        - name: ecr-pull
+
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+
+      containers:
+        - name: activity-service
+          image: IMAGE_PLACEHOLDER
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8080
+
+          env:
+            - name: SERVER_PORT
+              value: "8080"
+
+            # Oracle database URL
+            - name: DB_URL_ACTIVITY
+              valueFrom:
+                configMapKeyRef:
+                  name: capstone-config
+                  key: SPRING_DATASOURCE_URL
+
+            # Oracle database credentials
+            - name: DB_USERNAME_ACTIVITY
+              valueFrom:
+                secretKeyRef:
+                  name: capstone-db
+                  key: ACTIVITY_DB_USERNAME
+
+            - name: DB_PASSWORD_ACTIVITY
+              valueFrom:
+                secretKeyRef:
+                  name: capstone-db
+                  key: ACTIVITY_DB_PASSWORD
+
+            # Kafka configuration
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: capstone-config
+                  key: SPRING_KAFKA_BOOTSTRAP_SERVERS
+
+            - name: KAFKA_ORDER_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: capstone-config
+                  key: KAFKA_TOPIC_ORDER_EVENTS
+
+            - name: KAFKA_GROUP_ID
+              value: "team1-activity-service"
+
+            # Temporarily disabled until payload compatibility
+            - name: SPRING_KAFKA_LISTENER_AUTO_STARTUP
+              value: "true"
+
+            # Keycloak authentication
+            - name: OAUTH_ISSUER
+              valueFrom:
+                configMapKeyRef:
+                  name: capstone-config
+                  key: SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI
+
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 10
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir: {}

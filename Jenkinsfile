@@ -1,5 +1,20 @@
+
 pipeline {
     agent any
+
+    parameters {
+        booleanParam(
+            name: 'ACTIVITY_ONLY',
+            defaultValue: false,
+            description: 'Run only Activity Service stages'
+        )
+
+        booleanParam(
+            name: 'DEPLOY_ACTIVITY_SERVICE',
+            defaultValue: false,
+            description: 'Deploy Activity Service to Kubernetes'
+        )
+    }
 
     options {
         skipDefaultCheckout(true)
@@ -10,7 +25,6 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                // gets latest update from reppo
                 checkout scm
             }
         }
@@ -22,35 +36,65 @@ pipeline {
                     reuseNode true
                 }
             }
+
             steps {
-                dir('order-service') {
+                script {
+                    if (!params.ACTIVITY_ONLY) {
+                        dir('order-service') {
+                            sh 'mvn -B -ntp -Dspring.profiles.active=ci clean verify'
+                        }
+                    }
+                }
+
+                dir('activity-service') {
                     sh 'mvn -B -ntp -Dspring.profiles.active=ci clean verify'
                 }
             }
+
             post {
                 always {
-                    junit testResults: 'order-service/target/surefire-reports/TEST-*.xml'
+                    junit testResults: '**/target/surefire-reports/TEST-*.xml'
                 }
             }
         }
 
         stage('Build Docker images') {
             steps {
-                sh 'docker build -t order-service:latest ./order-service'
-                // sh 'docker build -t activity-service:latest ./activity-service'
+                script {
+                    if (!params.ACTIVITY_ONLY) {
+                        sh 'docker build -t order-service:latest ./order-service'
+                    }
+                }
+
+                sh 'docker build -t activity-service:latest ./activity-service'
             }
         }
 
         stage('Push to ECR') {
             steps {
                 sh '''
-                    IMAGE="$ECR_REPO:order-service-$BUILD_NUMBER"
-
-                    docker tag order-service:latest "$IMAGE"
                     docker login --username AWS --password-stdin "$ECR_REGISTRY" < /ecr/token
-                    docker push "$IMAGE"
+                '''
+
+                script {
+                    if (!params.ACTIVITY_ONLY) {
+                        sh '''
+                            ORDER_IMAGE="$ECR_REPO:order-service-$BUILD_NUMBER"
+
+                            docker tag order-service:latest "$ORDER_IMAGE"
+                            docker push "$ORDER_IMAGE"
+                        '''
+                    }
+                }
+
+                sh '''
+                    ACTIVITY_IMAGE="$ECR_REPO:activity-service-$BUILD_TAG"
+
+                    docker tag activity-service:latest "$ACTIVITY_IMAGE"
+                    docker push "$ACTIVITY_IMAGE"
                 '''
             }
+
             post {
                 always {
                     sh 'docker logout "$ECR_REGISTRY" > /dev/null 2>&1 || true'
@@ -58,7 +102,42 @@ pipeline {
             }
         }
 
+        stage('Deploy Activity Service') {
+            when {
+                expression {
+                    params.DEPLOY_ACTIVITY_SERVICE
+                }
+            }
+
+            steps {
+                sh '''
+                    IMAGE="$ECR_REPO:activity-service-$BUILD_TAG"
+
+                    sed "s|IMAGE_PLACEHOLDER|$IMAGE|g" \\
+                        k8s/activity-deployment.yaml \\
+                        > activity-deployment-rendered.yaml
+
+                    kubectl apply --dry-run=server \\
+                        -f activity-deployment-rendered.yaml \\
+                        -f k8s/activity-service.yaml
+
+                    kubectl apply \\
+                        -f activity-deployment-rendered.yaml \\
+                        -f k8s/activity-service.yaml
+
+                    kubectl rollout status deployment/activity-service \\
+                        -n team-1 --timeout=360s
+                '''
+            }
+        }
+
         stage('Run Order Service') {
+            when {
+                expression {
+                    !params.ACTIVITY_ONLY
+                }
+            }
+
             steps {
                 withCredentials([
                     file(credentialsId: 'orders-env', variable: 'ORDERS_ENV')

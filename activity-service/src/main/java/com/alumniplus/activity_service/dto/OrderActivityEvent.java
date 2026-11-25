@@ -1,16 +1,14 @@
-
 package com.alumniplus.activity_service.dto;
 
 import java.time.Instant;
 
-// DTO uses eventTime and actor instead of occurredAt and owner to 
-// match the message received from the Order Service.
-// While the model uses occurredAt and owner to match the database column names.
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record OrderActivityEvent(
-    String eventId,
     Long orderId,
-    String eventType,
-    Instant eventTime,
-    String actor
-) {
-}
+    String owner,
+    String status,
+    Instant updatedAt,
+    Long version
+) {}
