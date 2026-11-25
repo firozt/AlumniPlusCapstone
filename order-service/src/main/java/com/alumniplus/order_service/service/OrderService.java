@@ -2,6 +2,7 @@ package com.alumniplus.order_service.service;
 
 import com.alumniplus.order_service.dto.CreateOrderRequest;
 import com.alumniplus.order_service.dto.OrderResponse;
+import com.alumniplus.order_service.dto.CancellationResult;
 import com.alumniplus.order_service.dto.OrderSummaryResponse;
 import com.alumniplus.order_service.model.Instrument;
 import com.alumniplus.order_service.model.OrderEntity;
@@ -10,6 +11,13 @@ import com.alumniplus.order_service.repository.InstrumentRepository;
 import com.alumniplus.order_service.repository.OrderRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
@@ -25,10 +33,61 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final InstrumentRepository instrumentRepository;
+    private final OrderEventPublisher orderEventPublisher;
+    private final TransactionTemplate transactions; // used to make submit and cancel order transactions
+    private final Executor acceptanceExecutor; // used to make accepting an order a background process
+    private final long acceptanceDelayMs;
 
-    public OrderService(OrderRepository orderRepository, InstrumentRepository instrumentRepository) {
+    public OrderService(OrderRepository orderRepository, InstrumentRepository instrumentRepository,
+            OrderEventPublisher orderEventPublisher, PlatformTransactionManager transactionManager,
+            @Qualifier("orderAcceptanceExecutor") Executor acceptanceExecutor,
+            @Value("${app.orders.acceptance-delay-ms}") long acceptanceDelayMs) {
+        if (acceptanceDelayMs < 0) {
+            throw new IllegalArgumentException("Acceptance delay must not be negative");
+        }
         this.orderRepository = orderRepository;
         this.instrumentRepository = instrumentRepository;
+        this.orderEventPublisher = orderEventPublisher;
+        this.transactions = new TransactionTemplate(transactionManager);
+        this.transactions.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.acceptanceExecutor = acceptanceExecutor;
+        this.acceptanceDelayMs = acceptanceDelayMs;
+    }
+
+    public OrderResponse submitOrder(CreateOrderRequest request, String owner) {
+        OrderResponse order = transactions.execute(status -> createOrder(request, owner));
+        orderEventPublisher.publish(order);
+
+        try {
+            acceptanceExecutor.execute(() -> acceptLater(order.orderId()));
+        } catch (RejectedExecutionException exception) {
+            // keep the committed submission if the acceptance queue is full/ fails
+        }
+        return order;
+    }
+
+    public OrderResponse cancelOrder(Long orderId, String owner) {
+        CancellationResult result = transactions.execute(status -> cancelInTransaction(orderId, owner));
+        // check if order was actually changed
+        if (result.changed()) {
+            orderEventPublisher.publish(result.order());
+        }
+        return result.order();
+    }
+
+    // this should only be called via the executor so it doesnt stall the main thread
+    void acceptLater(Long orderId) {
+        try {
+            Thread.sleep(acceptanceDelayMs);
+            Optional<OrderResponse> accepted = transactions.execute(status -> acceptIfSubmitted(orderId));
+            accepted.ifPresent(orderEventPublisher::publish);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        } catch (ObjectOptimisticLockingFailureException exception) {
+            // A concurrent update wins; do not overwrite it or publish acceptance.
+        } catch (Exception exception) {
+            // Background failures must not affect the completed submit request.
+        }
     }
 
     // takes order request and inserts it into the database
@@ -84,8 +143,7 @@ public class OrderService {
                 .toList();
     }
 
-    @Transactional
-    public OrderResponse cancelOrder(Long orderId, String owner) {
+    private CancellationResult cancelInTransaction(Long orderId, String owner) {
         // verify owner
         if (owner == null || owner.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token is missing preferred_username");
@@ -98,7 +156,7 @@ public class OrderService {
 
         // check if its already cancelled
         if (order.getStatus() == OrderStatus.CANCELLED) {
-            return OrderResponse.from(order);
+            return new CancellationResult(OrderResponse.from(order), false);
         }
 
         // set to cancelled
@@ -111,7 +169,7 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Order changed while cancelling; reload and retry", exception);
         }
-        return OrderResponse.from(order);
+        return new CancellationResult(OrderResponse.from(order), true);
     }
 
     @Transactional(readOnly = true)

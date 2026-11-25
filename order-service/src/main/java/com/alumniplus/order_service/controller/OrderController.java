@@ -15,7 +15,6 @@ import com.alumniplus.order_service.dto.OrderResponse;
 import com.alumniplus.order_service.dto.OrderSummaryResponse;
 import org.springframework.security.core.Authentication;
 import com.alumniplus.order_service.service.OrderService;
-import com.alumniplus.order_service.service.OrderSubmissionService;
 import jakarta.validation.Valid;
 
 @RestController
@@ -23,11 +22,9 @@ import jakarta.validation.Valid;
 public class OrderController {
 
     private final OrderService orderService;
-    private final OrderSubmissionService orderSubmissionService;
 
-    public OrderController(OrderService orderService,OrderSubmissionService orderSubmissionService) {
+    public OrderController(OrderService orderService) {
         this.orderService = orderService;
-        this.orderSubmissionService = orderSubmissionService;
     }
 
     @GetMapping("/")
@@ -77,7 +74,7 @@ public class OrderController {
         if (username == null || username.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token is missing preferred_username");
         }
-        return orderSubmissionService.submitOrder(request, username);
+        return orderService.submitOrder(request, username);
     }
 
     @PreAuthorize("hasRole('TRADER')")
