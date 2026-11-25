@@ -189,26 +189,17 @@ class OrderServiceTest {
     }
 
     @Test
-<<<<<<< HEAD
     void cancellingAlreadyCancelledOrderLeavesItUnchanged() {
         // given -> a CANCELLED order belonging to the caller
-=======
-    void cancellingAlreadyCancelledOrderReturnsConflict() {
->>>>>>> origin/dennis-branch
         OrderEntity order = cancellationOrder(OrderStatus.CANCELLED);
         when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
 
-<<<<<<< HEAD
         // when -> the owner cancels it again
         OrderResponse response = orderService.cancelOrder(10L, "team-1-trader1");
         // then -> return the unchanged order without publishing or flushing
         verifyNoInteractions(orderEventPublisher);
-=======
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> orderService.cancelOrder(10L, "team-1-trader1"));
->>>>>>> origin/dennis-branch
 
-        assertEquals(HttpStatus.CONFLICT, ex.getStatusCode());
+        assertEquals(OrderStatus.CANCELLED, response.status());
         assertEquals(OrderStatus.CANCELLED, order.getStatus());
         verify(orderRepository).findById(10L);
         verifyNoMoreInteractions(orderRepository);
